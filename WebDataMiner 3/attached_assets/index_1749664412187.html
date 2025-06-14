@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i data-feather="filter" class="me-3"></i>
+                Profile Filter
+            </h1>
+            <p class="lead text-muted">
+                Filter LinkedIn profiles using advanced criteria with Bright Data's comprehensive dataset
+            </p>
+        </div>
+
+        <!-- Filter Form -->
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="search" class="me-2"></i>
+                    Filter Criteria
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="filterForm">
+                    <!-- Base Company (Required) -->
+                    <div class="mb-4">
+                        <label for="base_company" class="form-label">
+                            <i data-feather="home" class="me-1"></i>
+                            Current Company Name *
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="base_company" 
+                               name="base_company" 
+                               placeholder="e.g., Google, Microsoft, Apple"
+                               required>
+                        <div class="form-text">Primary filter for current company affiliation</div>
+                    </div>
+
+                    <!-- Additional Filters -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i data-feather="sliders" class="me-1"></i>
+                                Additional Filters (Optional)
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info mb-3">
+                                <i data-feather="info" class="me-1"></i>
+                                <small><strong>Tip:</strong> Additional filters use flexible partial matching. Leave blank to include all profiles from the base company search.</small>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="extra_company" class="form-label">
+                                        <i data-feather="briefcase" class="me-1"></i>
+                                        Experience Company
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="extra_company" 
+                                           name="extra_company" 
+                                           placeholder="e.g., Google, Apple, Meta">
+                                    <div class="form-text">Partial match in work history or current company</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="job_title" class="form-label">
+                                        <i data-feather="user-check" class="me-1"></i>
+                                        Job Title
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="job_title" 
+                                           name="job_title" 
+                                           placeholder="e.g., Engineer, Manager, Director">
+                                    <div class="form-text">Partial match in any job title</div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="linkedin_url" class="form-label">
+                                    <i data-feather="linkedin" class="me-1"></i>
+                                    LinkedIn URL Pattern
+                                </label>
+                                <input type="url" 
+                                       class="form-control" 
+                                       id="linkedin_url" 
+                                       name="linkedin_url" 
+                                       placeholder="https://linkedin.com/company/example">
+                                <div class="form-text">Partial URL match in experience or profile</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i data-feather="search" class="me-2"></i>
+                            Start Filtering
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Progress Section (Hidden by default) -->
+        <div id="progressSection" class="card mt-4" style="display: none;">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <h5 id="progressTitle">Processing Your Request</h5>
+                <p id="progressMessage" class="text-muted mb-3">Initializing filter request...</p>
+                <div class="progress mb-3">
+                    <div id="progressBar" 
+                         class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" 
+                         style="width: 0%">
+                    </div>
+                </div>
+                <small id="progressDetail" class="text-muted">This may take a few minutes depending on dataset size</small>
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="row mt-5">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i data-feather="database" class="mb-3" style="width: 48px; height: 48px;"></i>
+                        <h6>Comprehensive Data</h6>
+                        <p class="text-muted small">Access millions of LinkedIn profiles with detailed work history</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i data-feather="zap" class="mb-3" style="width: 48px; height: 48px;"></i>
+                        <h6>Real-time Processing</h6>
+                        <p class="text-muted small">Live progress tracking with instant result notifications</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i data-feather="download" class="mb-3" style="width: 48px; height: 48px;"></i>
+                        <h6>Export Results</h6>
+                        <p class="text-muted small">Download filtered profiles in JSON format for further analysis</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('filterForm');
+    const progressSection = document.getElementById('progressSection');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        
+        // Show progress section
+        progressSection.style.display = 'block';
+        form.style.display = 'none';
+        
+        // Submit form
+        fetch('/filter', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.cached) {
+                    // Show cached result immediately
+                    updateProgress(100, 'Results Ready!', `Found ${data.result_count} cached profiles`);
+                    document.getElementById('progressDetail').textContent = 'Using cached results from previous search';
+                    setTimeout(() => {
+                        window.location.href = `/results/${data.request_id}`;
+                    }, 1500);
+                } else {
+                    startProgressTracking(data.request_id);
+                }
+            } else {
+                showError(data.error || 'An error occurred');
+                resetForm();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showError('Network error occurred');
+            resetForm();
+        });
+    });
+    
+    function startProgressTracking(requestId) {
+        updateProgress(25, 'Creating dataset filter...', 'Filter request submitted successfully');
+        
+        const checkStatus = () => {
+            fetch(`/check_status/${requestId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'building') {
+                    updateProgress(50, 'Building snapshot...', 'Processing dataset - this may take several minutes');
+                    setTimeout(checkStatus, 5000); // Check every 5 seconds
+                } else if (data.status === 'completed') {
+                    updateProgress(100, 'Complete!', `Found ${data.result_count} matching profiles`);
+                    setTimeout(() => {
+                        window.location.href = `/results/${requestId}`;
+                    }, 2000);
+                } else if (data.status === 'failed') {
+                    showError('Filter request failed');
+                    resetForm();
+                } else {
+                    setTimeout(checkStatus, 3000);
+                }
+            })
+            .catch(error => {
+                console.error('Status check error:', error);
+                setTimeout(checkStatus, 5000);
+            });
+        };
+        
+        setTimeout(checkStatus, 2000);
+    }
+    
+    function updateProgress(percent, title, message) {
+        document.getElementById('progressBar').style.width = percent + '%';
+        document.getElementById('progressTitle').textContent = title;
+        document.getElementById('progressMessage').textContent = message;
+        
+        if (percent === 100) {
+            document.getElementById('progressDetail').textContent = 'Redirecting to results...';
+            document.querySelector('.spinner-border').style.display = 'none';
+        }
+    }
+    
+    function showError(message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.row'));
+    }
+    
+    function resetForm() {
+        progressSection.style.display = 'none';
+        form.style.display = 'block';
+        submitBtn.disabled = false;
+    }
+});
+</script>
+{% endblock %}

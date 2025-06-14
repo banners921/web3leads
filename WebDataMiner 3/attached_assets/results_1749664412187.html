@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Filter Results - LinkedIn Profile Filter{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>
+                    <i data-feather="check-circle" class="me-2 text-success"></i>
+                    Filter Results
+                </h2>
+                <p class="text-muted mb-0">
+                    Found <strong>{{ total_count }}</strong> matching profiles
+                    {% if filter_request.extra_company or filter_request.linkedin_url or filter_request.job_title %}
+                        with additional filters applied
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary me-2">
+                    <i data-feather="arrow-left" class="me-1"></i>
+                    New Search
+                </a>
+                <a href="{{ url_for('download_results', request_id=filter_request.id) }}" 
+                   class="btn btn-primary">
+                    <i data-feather="download" class="me-1"></i>
+                    Download JSON
+                </a>
+            </div>
+        </div>
+
+        <!-- Filter Summary -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i data-feather="info" class="me-1"></i>
+                    Filter Summary
+                </h6>
+                {% if filter_request.is_cache_valid() %}
+                <span class="badge bg-success">
+                    <i data-feather="clock" class="me-1" style="width: 12px; height: 12px;"></i>
+                    Cached Results
+                </span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Primary Company:</strong> {{ filter_request.base_company }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Completed:</strong> {{ filter_request.completed_at.strftime('%Y-%m-%d %H:%M UTC') if filter_request.completed_at else 'N/A' }}
+                    </div>
+                </div>
+                {% if filter_request.extra_company or filter_request.linkedin_url or filter_request.job_title %}
+                <hr>
+                <div class="row">
+                    {% if filter_request.extra_company %}
+                    <div class="col-md-4">
+                        <strong>Experience Company:</strong> {{ filter_request.extra_company }}
+                    </div>
+                    {% endif %}
+                    {% if filter_request.job_title %}
+                    <div class="col-md-4">
+                        <strong>Job Title:</strong> {{ filter_request.job_title }}
+                    </div>
+                    {% endif %}
+                    {% if filter_request.linkedin_url %}
+                    <div class="col-md-4">
+                        <strong>LinkedIn URL:</strong> {{ filter_request.linkedin_url }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Results - Card Layout -->
+        {% if profiles %}
+        <div class="mb-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i data-feather="users" class="me-2"></i>
+                Matched Profiles
+            </h5>
+            <span class="badge bg-primary fs-6">{{ total_count }} results</span>
+        </div>
+        
+        <div class="row">
+            {% for profile in profiles %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="profile-card card h-100">
+                    <!-- Profile Header -->
+                    <div class="card-body pb-2">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h6 class="card-title mb-0 text-white">{{ profile.name or 'N/A' }}</h6>
+                            {% if profile.url %}
+                            <a href="{{ profile.url }}" target="_blank" class="text-cyan">
+                                <i data-feather="linkedin" style="width: 18px; height: 18px;"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Profile Image -->
+                        <div class="text-center mb-3">
+                            {% if profile.avatar %}
+                            <img src="{{ profile.avatar }}" 
+                                 alt="{{ profile.name }}" 
+                                 class="rounded-circle profile-img"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            {% endif %}
+                            <div class="profile-placeholder rounded-circle mx-auto {% if profile.avatar %}d-none{% else %}d-flex{% endif %} align-items-center justify-content-center">
+                                <i data-feather="user" style="width: 40px; height: 40px;" class="text-muted"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Job Title & Company -->
+                        <div class="text-center mb-3">
+                            <div class="job-title text-cyan mb-1">
+                                <i data-feather="briefcase" class="me-1" style="width: 14px; height: 14px;"></i>
+                                {{ profile.matched_job_title or profile.position or 'N/A' }}
+                            </div>
+                            <div class="company-name text-white-50">
+                                <i data-feather="building" class="me-1" style="width: 14px; height: 14px;"></i>
+                                {% if profile.current_company_name %}
+                                    {{ profile.current_company_name }}
+                                {% elif profile.current_company and profile.current_company.name %}
+                                    {{ profile.current_company.name }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Location -->
+                        {% if profile.city %}
+                        <div class="text-center mb-3">
+                            <span class="location-badge">
+                                <i data-feather="map-pin" class="me-1" style="width: 12px; height: 12px;"></i>
+                                {{ profile.city }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="card-footer bg-transparent border-0 pt-0">
+                        <div class="row g-2">
+                            {% if profile.url %}
+                            <div class="col-4">
+                                <a href="{{ profile.url }}" target="_blank" class="btn btn-outline-cyan btn-sm w-100">
+                                    <i data-feather="linkedin" style="width: 14px; height: 14px;"></i>
+                                    LinkedIn
+                                </a>
+                            </div>
+                            {% endif %}
+                            <div class="col-4">
+                                <button class="btn btn-outline-success btn-sm w-100" onclick="findEmail({{ loop.index0 }})">
+                                    <i data-feather="mail" style="width: 14px; height: 14px;"></i>
+                                    Find Email
+                                </button>
+                            </div>
+                            <div class="col-4">
+                                <button class="btn btn-outline-info btn-sm w-100" onclick="findTwitter({{ loop.index0 }})">
+                                    <i data-feather="twitter" style="width: 14px; height: 14px;"></i>
+                                    Find Twitter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- No Results -->
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i data-feather="search" class="mb-3 text-muted" style="width: 64px; height: 64px;"></i>
+                <h4>No Matching Profiles Found</h4>
+                <p class="text-muted mb-4">
+                    Try adjusting your filter criteria to find more results.
+                </p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i data-feather="arrow-left" class="me-1"></i>
+                    Try Different Filters
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Hidden data for JavaScript -->
+<script type="application/json" id="profilesData">
+{{ profiles | tojson }}
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load profiles data
+const profiles = JSON.parse(document.getElementById('profilesData').textContent);
+
+function findEmail(index) {
+    const profile = profiles[index];
+    const name = profile.name || '';
+    const company = profile.current_company_name || profile.current_company?.name || '';
+    
+    // Common email patterns to try
+    const patterns = [
+        `${name.toLowerCase().replace(/\s+/g, '.')}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+        `${name.toLowerCase().replace(/\s+/g, '')}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+        `${name.split(' ')[0]?.toLowerCase()}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+        `${name.split(' ')[0]?.toLowerCase()}.${name.split(' ')[1]?.toLowerCase()}@${company.toLowerCase().replace(/\s+/g, '')}.com`
+    ].filter(email => email.includes('@') && !email.includes('undefined'));
+    
+    if (patterns.length > 0) {
+        const emailText = patterns.join('\n');
+        navigator.clipboard.writeText(emailText).then(() => {
+            showButtonFeedback(event.target, 'Copied!', 'btn-success');
+        });
+    } else {
+        alert('Could not generate email patterns for this profile');
+    }
+}
+
+function findTwitter(index) {
+    const profile = profiles[index];
+    const name = profile.name || '';
+    
+    // Generate Twitter search URLs
+    const twitterSearches = [
+        `https://twitter.com/search?q="${name}"`,
+        `https://twitter.com/search?q="${name.replace(/\s+/g, '')}"`,
+        `https://twitter.com/search?q="${name}" linkedin`
+    ];
+    
+    // Open first search in new tab
+    if (twitterSearches.length > 0) {
+        window.open(twitterSearches[0], '_blank');
+        showButtonFeedback(event.target, 'Opened!', 'btn-info');
+    }
+}
+
+function showButtonFeedback(button, text, className) {
+    const btn = button.closest('button');
+    const originalContent = btn.innerHTML;
+    const originalClasses = btn.className;
+    
+    btn.innerHTML = `<i data-feather="check" style="width: 14px; height: 14px;"></i> ${text}`;
+    btn.className = btn.className.replace(/btn-outline-\w+/, className);
+    
+    setTimeout(() => {
+        btn.innerHTML = originalContent;
+        btn.className = originalClasses;
+        feather.replace();
+    }, 2000);
+    
+    feather.replace();
+}
+
+// Replace feather icons after page load
+document.addEventListener('DOMContentLoaded', function() {
+    feather.replace();
+});
+</script>
+{% endblock %}

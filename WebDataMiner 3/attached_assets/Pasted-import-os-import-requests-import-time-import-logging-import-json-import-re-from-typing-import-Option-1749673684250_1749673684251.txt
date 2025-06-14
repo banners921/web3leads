@@ -1,0 +1,290 @@
+import os
+import requests
+import time
+import logging
+import json
+import re
+from typing import Optional, List, Dict, Any, Tuple
+
+logger = logging.getLogger(__name__)
+
+class BrightDataService:
+    """Service class for interacting with Bright Data API"""
+    
+    def __init__(self):
+        self.api_key = os.environ.get("BRIGHT_DATA_API_KEY")
+        self.dataset_id = "gd_l1viktl72bvl7bjuj0"
+    
+    def filter_dataset(self, company_name: str) -> Optional[str]:
+        """
+        Create a filtered dataset snapshot for the given company
+        Returns snapshot_id if successful, None otherwise
+        """
+        try:
+            url = "https://api.brightdata.com/datasets/filter"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+
+            payload = {
+                "dataset_id": self.dataset_id,
+                "filter": {
+                    "operator": "and",
+                    "filters": [
+                        {
+                            "name": "current_company_name",
+                            "value": company_name,
+                            "operator": "="
+                        }
+                    ]
+                }
+            }
+
+            logger.info(f"Creating dataset filter for company: {company_name}")
+            response = requests.post(url, headers=headers, json=payload)
+
+            if response.ok:
+                snapshot_id = response.json().get("snapshot_id")
+                logger.info(f"Filter request successful. Snapshot ID: {snapshot_id}")
+                return snapshot_id
+            else:
+                logger.error(f"Filter request failed: {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error creating dataset filter: {str(e)}")
+            return None
+    
+    def normalize_linkedin_url(self, url):
+        """Remove https://www. and trailing slashes from LinkedIn URL."""
+        if not url:
+            return ""
+        url = str(url).strip().lower()
+        # Remove protocol and www
+        url = re.sub(r'^https?://(www\.)?', '', url)
+        # Remove trailing slash
+        url = url.rstrip('/')
+        return url
+    
+    def check_snapshot_status(self, snapshot_id: str) -> Tuple[bool, str]:
+        """
+        Check if a snapshot is ready for download
+        Returns (is_ready, status_message)
+        """
+        try:
+            url = f"https://api.brightdata.com/datasets/snapshots/{snapshot_id}/download"
+            headers = {"Authorization": f"Bearer {self.api_key}"}
+            
+            response = requests.get(url, headers=headers)
+            
+            if response.ok and "Snapshot is building" not in response.text:
+                return True, "Snapshot is ready for download"
+            else:
+                return False, "Snapshot is still building"
+                
+        except Exception as e:
+            logger.error(f"Error checking snapshot status: {str(e)}")
+            return False, "Error checking status"
+    
+    def download_snapshot(self, snapshot_id: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        Download snapshot data
+        Returns list of profile data if successful, None otherwise
+        """
+        try:
+            url = f"https://api.brightdata.com/datasets/snapshots/{snapshot_id}/download"
+            headers = {"Authorization": f"Bearer {self.api_key}"}
+            
+            response = requests.get(url, headers=headers)
+            
+            if response.ok and "Snapshot is building" not in response.text:
+                logger.info("Snapshot ready. Processing data...")
+                try:
+                    # If data has multiple JSON objects, split and parse manually
+                    raw_objects = response.text.strip().split("\n")
+                    data = [json.loads(obj) for obj in raw_objects if obj.strip()]
+
+                    filtered_data = []
+                    for d in data:
+                        filtered_profile = {
+                            "url": d.get("url"),
+                            "name": d.get("name"),
+                            "city": d.get("city"),
+                            "position": d.get("position"),
+                            "avatar": d.get("avatar"),
+                            "experience": d.get("experience", []),
+                            "current_company": {
+                                "name": d.get("current_company_name"),
+                                "title": d.get("current_company_title")
+                            }
+                        }
+                        filtered_data.append(filtered_profile)
+
+                    # Log sample data structure for debugging
+                    if filtered_data:
+                        sample = filtered_data[0]
+                        logger.info(f"Sample profile structure: {json.dumps(sample, indent=2)}")
+                        
+                        # Log experience structure specifically
+                        if sample.get("experience"):
+                            sample_exp = sample["experience"][0] if isinstance(sample["experience"], list) else sample["experience"]
+                            logger.info(f"Sample experience structure: {json.dumps(sample_exp, indent=2)}")
+                    
+                    logger.info(f"Processed {len(filtered_data)} profiles")
+                    return filtered_data
+
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON decode error: {str(e)}")
+                    return []
+            else:
+                logger.info("Snapshot still building")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error downloading snapshot: {str(e)}")
+            return []
+    
+    def apply_additional_filter(self, profiles: List[Dict[str, Any]], 
+                              extra_company: str = "", 
+                              linkedin_url: str = "", 
+                              job_title: str = "") -> List[Dict[str, Any]]:
+        """
+        Apply additional filters with the correct flow:
+        1. Check experience for company name AND linkedin match
+        2. If none, check current_company for company name AND linkedin match
+        3. Check current_company_name for name matching
+        4. For title display, use only title from current_company if matched there
+        """
+        if not profiles:
+            return []
+            
+        matched = []
+
+        input_company = extra_company.strip().lower() if extra_company else ""
+        normalized_linkedin = self.normalize_linkedin_url(linkedin_url) if linkedin_url else ""
+        input_title = job_title.strip().lower() if job_title else ""
+
+        logger.info(f"Applying filters - Company: '{input_company}', LinkedIn: '{normalized_linkedin}', Title: '{input_title}'")
+
+        # If no additional filters are provided, return all profiles
+        if not input_company and not normalized_linkedin and not input_title:
+            return profiles
+
+        for profile in profiles:
+            experiences = profile.get("experience", [])
+            if experiences is None:
+                experiences = []
+            
+            # Get current company info
+            current_company_name = ""
+            current_title = ""
+            current_company_linkedin = ""
+            
+            if "current_company_name" in profile:  # Original format
+                current_company_name = str(profile.get("current_company_name", "")).strip().lower()
+                current_title = str(profile.get("current_company_title", "")).strip()
+            else:  # Bright Data format
+                current_company = profile.get("current_company") or {}
+                current_company_name = str(current_company.get("name", "")).strip().lower()
+                current_title = str(current_company.get("title", "")).strip()
+                current_company_linkedin = self.normalize_linkedin_url(str(current_company.get("url", "")))
+
+            profile_name = profile.get("name", "Unknown")
+            logger.debug(f"Checking profile: {profile_name}")
+            logger.debug(f"Current company: '{current_company_name}', title: '{current_title}'")
+            logger.debug(f"Experience count: {len(experiences)}")
+
+            # Step 1: Check experience for company name AND LinkedIn URL match
+            experience_match = False
+            experience_matched_title = ""
+            
+            if input_company and normalized_linkedin:
+                for i, exp in enumerate(experiences):
+                    if isinstance(exp, dict):
+                        exp_company = str(exp.get("company", "")).strip().lower()
+                        exp_linkedin = self.normalize_linkedin_url(str(exp.get("url", "")))
+                        exp_title = str(exp.get("title", "")).strip()
+                        
+                        logger.debug(f"Experience {i}: company='{exp_company}', linkedin='{exp_linkedin}', title='{exp_title}'")
+                        
+                        if input_company in exp_company and normalized_linkedin in exp_linkedin:
+                            experience_match = True
+                            experience_matched_title = exp_title
+                            logger.debug(f"Experience match found: {exp_company} + {exp_linkedin}")
+                            break
+            
+            # Step 2: If no experience match, check current_company for company name AND LinkedIn URL
+            current_company_match = False
+            current_company_matched_title = ""
+            
+            if not experience_match and input_company and normalized_linkedin:
+                if (input_company in current_company_name and 
+                    normalized_linkedin in current_company_linkedin):
+                    current_company_match = True
+                    current_company_matched_title = current_title
+                    logger.debug(f"Current company match found: {current_company_name} + {current_company_linkedin}")
+            
+            # Step 3: Check current_company_name for name matching (if no previous matches)
+            current_name_match = False
+            current_name_matched_title = ""
+            
+            if not experience_match and not current_company_match and input_company:
+                if input_company in current_company_name:
+                    current_name_match = True
+                    current_name_matched_title = current_title
+                    logger.debug(f"Current company name match found: {current_company_name}")
+            
+            # Determine if profile has company/linkedin match
+            has_company_match = experience_match or current_company_match or current_name_match
+            
+            # If no company filter provided, include all
+            if not input_company and not normalized_linkedin:
+                has_company_match = True
+            
+            # Job title filter
+            job_title_match = True
+            matched_job_title = ""
+            
+            if input_title:
+                job_title_match = False
+                
+                # Check current title first
+                if input_title in current_title.lower():
+                    job_title_match = True
+                    matched_job_title = current_title  # Use full current title
+                    logger.debug(f"Job title match in current title: {current_title}")
+                
+                # If not found in current title, check experience titles
+                if not job_title_match:
+                    for exp in experiences:
+                        if isinstance(exp, dict):
+                            exp_title = str(exp.get("title", "")).strip()
+                            if input_title in exp_title.lower():
+                                job_title_match = True
+                                matched_job_title = exp_title  # Use full experience title
+                                logger.debug(f"Job title match in experience: {exp_title}")
+                                break
+            
+            # Step 4: For display title, prioritize current_company title if matched there
+            display_title = ""
+            if current_company_match or current_name_match:
+                display_title = current_company_matched_title or current_name_matched_title
+            elif experience_match:
+                display_title = experience_matched_title
+            elif matched_job_title:
+                display_title = matched_job_title
+            elif current_title:
+                display_title = current_title
+            
+            # Include profile if it passes all filters
+            if has_company_match and job_title_match:
+                if display_title:
+                    profile["matched_job_title"] = display_title
+                matched.append(profile)
+                logger.debug(f"Profile {profile_name} included in results with title: {display_title}")
+            else:
+                logger.debug(f"Profile {profile_name} filtered out - Company: {has_company_match}, Title: {job_title_match}")
+
+        logger.info(f"Filtered {len(profiles)} profiles -> {len(matched)} matches")
+        return matched

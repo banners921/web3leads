@@ -1,0 +1,642 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - Web3leads{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>
+                    <i data-feather="check-circle" class="me-2 text-success"></i>
+                    Search Results
+                </h2>
+                <p class="text-muted mb-0">
+                    Found <strong>{{ total_count }}</strong> matching profiles
+                    {% if filter_request.extra_company or filter_request.linkedin_url or filter_request.job_title %}
+                        with additional filters applied
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary me-2">
+                    <i data-feather="arrow-left" class="me-1"></i>
+                    New Search
+                </a>
+                <a href="{{ url_for('download_results', request_id=filter_request.id) }}" 
+                   class="btn btn-primary">
+                    <i data-feather="download" class="me-1"></i>
+                    Download JSON
+                </a>
+            </div>
+        </div>
+
+        <!-- Job Title Filter -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i data-feather="briefcase" class="me-1"></i>
+                    Job Title Categories
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <select class="form-select" id="jobTitleCategory">
+                            <option value="">Select a category...</option>
+                            <option value="executive">Executive (CEO, Founder, President)</option>
+                            <option value="engineering">Engineering (Developer, Engineer, Architect)</option>
+                            <option value="marketing">Marketing (Marketing Manager, Brand Manager)</option>
+                            <option value="sales">Sales (Sales Manager, Business Development)</option>
+                            <option value="finance">Finance (CFO, Financial Analyst, Accountant)</option>
+                            <option value="operations">Operations (Operations Manager, Ops Director)</option>
+                            <option value="hr">HR (Human Resources, Talent, Recruiter)</option>
+                            <option value="product">Product (Product Manager, Product Owner)</option>
+                            <option value="design">Design (UX Designer, UI Designer, Creative)</option>
+                            <option value="data">Data (Data Analyst, Data Scientist, Business Analyst)</option>
+                            <option value="consulting">Consulting (Consultant, Advisor, Strategist)</option>
+                            <option value="management">Management (Manager, Director, Head of)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" 
+                               class="form-control" 
+                               id="customJobTitle" 
+                               placeholder="Or enter custom title">
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex gap-2">
+                            <button type="button" 
+                                    class="btn btn-primary" 
+                                    onclick="searchByJobTitle()">
+                                <i data-feather="search" class="me-1"></i>
+                                Search
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-outline-secondary" 
+                                    onclick="clearJobTitleFilter()">
+                                <i data-feather="x" class="me-1"></i>
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-text mt-2">
+                    Select a job title category or enter a custom title, then click Search to filter and rank results by relevance.
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Summary -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i data-feather="info" class="me-1"></i>
+                    Filter Summary
+                </h6>
+                {% if filter_request.is_cache_valid() %}
+                <span class="badge bg-success">
+                    <i data-feather="clock" class="me-1" style="width: 12px; height: 12px;"></i>
+                    Cached Results
+                </span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Primary Company:</strong> {{ filter_request.base_company }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Completed:</strong> {{ filter_request.completed_at.strftime('%Y-%m-%d %H:%M UTC') if filter_request.completed_at else 'N/A' }}
+                    </div>
+                </div>
+                {% if filter_request.extra_company or filter_request.linkedin_url or filter_request.job_title %}
+                <hr>
+                <div class="row">
+                    {% if filter_request.extra_company %}
+                    <div class="col-md-4">
+                        <strong>Experience Company:</strong> {{ filter_request.extra_company }}
+                    </div>
+                    {% endif %}
+                    {% if filter_request.job_title %}
+                    <div class="col-md-4">
+                        <strong>Job Title:</strong> {{ filter_request.job_title }}
+                    </div>
+                    {% endif %}
+                    {% if filter_request.linkedin_url %}
+                    <div class="col-md-4">
+                        <strong>LinkedIn URL:</strong> {{ filter_request.linkedin_url }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Results - Card Layout -->
+        {% if profiles %}
+        <div class="mb-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i data-feather="users" class="me-2"></i>
+                Matched Profiles
+            </h5>
+            <span class="badge bg-primary fs-6">{{ total_count }} results</span>
+        </div>
+        
+        <div class="row" id="profilesContainer">
+            {% for profile in profiles %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="profile-card card h-100">
+                    <!-- Profile Header -->
+                    <div class="card-body pb-2">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h6 class="card-title mb-0 text-white">{{ profile.name or 'N/A' }}</h6>
+                            {% if profile.url %}
+                            <a href="{{ profile.url }}" target="_blank" class="text-cyan">
+                                <i data-feather="linkedin" style="width: 18px; height: 18px;"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Profile Image -->
+                        <div class="text-center mb-3">
+                            {% if profile.avatar %}
+                            <img src="{{ profile.avatar }}" 
+                                 alt="{{ profile.name }}" 
+                                 class="rounded-circle profile-img"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            {% endif %}
+                            <div class="profile-placeholder rounded-circle mx-auto {% if profile.avatar %}d-none{% else %}d-flex{% endif %} align-items-center justify-content-center">
+                                <i data-feather="user" style="width: 40px; height: 40px;" class="text-muted"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Job Title & Company -->
+                        <div class="text-center mb-3">
+                            <div class="job-title text-cyan mb-1">
+                                <i data-feather="briefcase" class="me-1" style="width: 14px; height: 14px;"></i>
+                                {{ profile.matched_job_title or profile.position or 'N/A' }}
+                            </div>
+                            <div class="company-name text-white-50">
+                                <i data-feather="building" class="me-1" style="width: 14px; height: 14px;"></i>
+                                {% if profile.current_company_name %}
+                                    {{ profile.current_company_name }}
+                                {% elif profile.current_company and profile.current_company.name %}
+                                    {{ profile.current_company.name }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Location -->
+                        {% if profile.city %}
+                        <div class="text-center mb-3">
+                            <span class="location-badge">
+                                <i data-feather="map-pin" class="me-1" style="width: 12px; height: 12px;"></i>
+                                {{ profile.city }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="card-footer bg-transparent border-0 pt-0">
+                        <div class="row g-2">
+                            {% if profile.url %}
+                            <div class="col-4">
+                                <a href="{{ profile.url }}" target="_blank" class="btn btn-outline-cyan btn-sm w-100">
+                                    <i data-feather="linkedin" style="width: 14px; height: 14px;"></i>
+                                    LinkedIn
+                                </a>
+                            </div>
+                            {% endif %}
+                            <div class="col-4">
+                                <button class="btn btn-outline-success btn-sm w-100" onclick="findEmail({{ loop.index0 }})">
+                                    <i data-feather="mail" style="width: 14px; height: 14px;"></i>
+                                    Find Email
+                                </button>
+                            </div>
+                            <div class="col-4">
+                                <button class="btn btn-outline-info btn-sm w-100" onclick="findTwitter({{ loop.index0 }})">
+                                    <i data-feather="twitter" style="width: 14px; height: 14px;"></i>
+                                    Find Twitter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- No Results -->
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i data-feather="search" class="mb-3 text-muted" style="width: 64px; height: 64px;"></i>
+                <h4>No Matching Profiles Found</h4>
+                <p class="text-muted mb-4">
+                    Try adjusting your filter criteria to find more results.
+                </p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i data-feather="arrow-left" class="me-1"></i>
+                    Try Different Filters
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Hidden data for JavaScript -->
+<script type="application/json" id="profilesData">
+{{ profiles | tojson }}
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load profiles data
+const profiles = JSON.parse(document.getElementById('profilesData').textContent);
+
+function findEmail(index) {
+    const profile = profiles[index];
+    const name = profile.name || '';
+    const company = profile.current_company_name || profile.current_company?.name || '';
+    
+    // Common email patterns to try
+    const patterns = [
+        `${name.toLowerCase().replace(/\s+/g, '.')}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+        `${name.toLowerCase().replace(/\s+/g, '')}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+        `${name.split(' ')[0]?.toLowerCase()}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+        `${name.split(' ')[0]?.toLowerCase()}.${name.split(' ')[1]?.toLowerCase()}@${company.toLowerCase().replace(/\s+/g, '')}.com`
+    ].filter(email => email.includes('@') && !email.includes('undefined'));
+    
+    if (patterns.length > 0) {
+        const emailText = patterns.join('\n');
+        navigator.clipboard.writeText(emailText).then(() => {
+            showButtonFeedback(event.target, 'Copied!', 'btn-success');
+        });
+    } else {
+        alert('Could not generate email patterns for this profile');
+    }
+}
+
+function findTwitter(index) {
+    const profile = profiles[index];
+    const name = profile.name || '';
+    
+    // Generate Twitter search URLs
+    const twitterSearches = [
+        `https://twitter.com/search?q="${name}"`,
+        `https://twitter.com/search?q="${name.replace(/\s+/g, '')}"`,
+        `https://twitter.com/search?q="${name}" linkedin`
+    ];
+    
+    // Open first search in new tab
+    if (twitterSearches.length > 0) {
+        window.open(twitterSearches[0], '_blank');
+        showButtonFeedback(event.target, 'Opened!', 'btn-info');
+    }
+}
+
+function showButtonFeedback(button, text, className) {
+    const btn = button.closest('button');
+    const originalContent = btn.innerHTML;
+    const originalClasses = btn.className;
+    
+    btn.innerHTML = `<i data-feather="check" style="width: 14px; height: 14px;"></i> ${text}`;
+    btn.className = btn.className.replace(/btn-outline-\w+/, className);
+    
+    setTimeout(() => {
+        btn.innerHTML = originalContent;
+        btn.className = originalClasses;
+        feather.replace();
+    }, 2000);
+    
+    feather.replace();
+}
+
+// Job title filtering and ranking functionality
+let originalProfiles = [...profiles];
+let filteredProfiles = [...profiles];
+
+function calculateTitleRelevance(profile, searchTerm) {
+    if (!searchTerm) return 0;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const title = (profile.matched_job_title || profile.position || '').toLowerCase();
+    const currentTitle = (profile.title || '').toLowerCase();
+    
+    let score = 0;
+    
+    // Exact match gets highest score
+    if (title === searchLower || currentTitle === searchLower) {
+        score += 100;
+    }
+    // Title starts with search term
+    else if (title.startsWith(searchLower) || currentTitle.startsWith(searchLower)) {
+        score += 80;
+    }
+    // Title contains search term
+    else if (title.includes(searchLower) || currentTitle.includes(searchLower)) {
+        score += 60;
+    }
+    
+    // Bonus for exact word matches
+    const titleWords = title.split(/\s+/);
+    const currentTitleWords = currentTitle.split(/\s+/);
+    const searchWords = searchLower.split(/\s+/);
+    
+    searchWords.forEach(searchWord => {
+        if (titleWords.includes(searchWord) || currentTitleWords.includes(searchWord)) {
+            score += 20;
+        }
+    });
+    
+    return score;
+}
+
+function getCategoryTitles(category) {
+    const titleCategories = {
+        "executive": ["ceo", "founder", "co-founder", "co founder", "owner", "president", "partner", "chief executive officer", "cofounder"],
+        "engineering": ["engineer", "developer", "programmer", "architect", "technical lead", "tech lead", "software engineer", "senior engineer", "principal engineer", "staff engineer"],
+        "marketing": ["marketing", "marketer", "marketing manager", "marketing director", "marketing specialist", "brand manager", "digital marketing", "content marketing"],
+        "sales": ["sales", "sales manager", "sales director", "sales representative", "account manager", "business development", "sales executive"],
+        "finance": ["finance", "financial", "accountant", "accounting", "cfo", "chief financial officer", "financial analyst", "finance manager"],
+        "operations": ["operations", "operations manager", "ops", "operational", "operations director", "operations specialist"],
+        "hr": ["hr", "human resources", "people", "talent", "recruiter", "recruitment", "hr manager", "people manager"],
+        "product": ["product", "product manager", "product director", "product owner", "product specialist", "product lead"],
+        "design": ["design", "designer", "ux", "ui", "user experience", "user interface", "creative", "graphic designer", "product designer"],
+        "data": ["data", "analyst", "data analyst", "data scientist", "analytics", "business analyst", "data engineer"],
+        "consulting": ["consultant", "consulting", "advisor", "advisory", "strategist", "strategy"],
+        "management": ["manager", "director", "head of", "vp", "vice president", "chief", "lead", "supervisor"]
+    };
+    
+    return titleCategories[category] || [];
+}
+
+function getExpandedJobTitles(inputTitle) {
+    if (!inputTitle) return [];
+    
+    const inputLower = inputTitle.toLowerCase().trim();
+    const titleCategories = {
+        "executive": ["ceo", "founder", "co-founder", "co founder", "owner", "president", "partner", "chief executive officer", "cofounder"],
+        "engineering": ["engineer", "developer", "programmer", "architect", "technical lead", "tech lead", "software engineer", "senior engineer", "principal engineer", "staff engineer"],
+        "marketing": ["marketing", "marketer", "marketing manager", "marketing director", "marketing specialist", "brand manager", "digital marketing", "content marketing"],
+        "sales": ["sales", "sales manager", "sales director", "sales representative", "account manager", "business development", "sales executive"],
+        "finance": ["finance", "financial", "accountant", "accounting", "cfo", "chief financial officer", "financial analyst", "finance manager"],
+        "operations": ["operations", "operations manager", "ops", "operational", "operations director", "operations specialist"],
+        "hr": ["hr", "human resources", "people", "talent", "recruiter", "recruitment", "hr manager", "people manager"],
+        "product": ["product", "product manager", "product director", "product owner", "product specialist", "product lead"],
+        "design": ["design", "designer", "ux", "ui", "user experience", "user interface", "creative", "graphic designer", "product designer"],
+        "data": ["data", "analyst", "data analyst", "data scientist", "analytics", "business analyst", "data engineer"],
+        "consulting": ["consultant", "consulting", "advisor", "advisory", "strategist", "strategy"],
+        "management": ["manager", "director", "head of", "vp", "vice president", "chief", "lead", "supervisor"]
+    };
+    
+    // Find which category the input title belongs to
+    for (const [category, titles] of Object.entries(titleCategories)) {
+        if (titles.some(title => inputLower.includes(title))) {
+            return titles;
+        }
+    }
+    
+    return [inputLower];
+}
+
+function calculateCategoryRelevance(profile, expandedTitles) {
+    if (!expandedTitles || expandedTitles.length === 0) return 0;
+    
+    const title = (profile.matched_job_title || profile.position || '').toLowerCase();
+    const currentTitle = (profile.title || '').toLowerCase();
+    
+    let score = 0;
+    
+    expandedTitles.forEach(categoryTitle => {
+        // Exact match gets highest score
+        if (title === categoryTitle || currentTitle === categoryTitle) {
+            score += 100;
+        }
+        // Title starts with category title
+        else if (title.startsWith(categoryTitle) || currentTitle.startsWith(categoryTitle)) {
+            score += 80;
+        }
+        // Title contains category title
+        else if (title.includes(categoryTitle) || currentTitle.includes(categoryTitle)) {
+            score += 60;
+        }
+    });
+    
+    return score;
+}
+
+function searchByJobTitle() {
+    const categorySelect = document.getElementById('jobTitleCategory');
+    const customTitle = document.getElementById('customJobTitle').value.trim();
+    
+    let searchTerm = '';
+    let expandedTitles = [];
+    
+    // Use custom title if provided, otherwise use selected category
+    if (customTitle) {
+        searchTerm = customTitle;
+        expandedTitles = getExpandedJobTitles(customTitle);
+    } else if (categorySelect.value) {
+        const category = categorySelect.value;
+        expandedTitles = getCategoryTitles(category);
+        searchTerm = categorySelect.options[categorySelect.selectedIndex].text.split('(')[0].trim();
+    }
+    
+    if (!searchTerm && !expandedTitles.length) {
+        alert('Please select a category or enter a custom job title');
+        return;
+    }
+    
+    // Filter profiles using expanded titles for better matching
+    filteredProfiles = originalProfiles.filter(profile => {
+        if (expandedTitles.length > 0) {
+            return calculateCategoryRelevance(profile, expandedTitles) > 0;
+        } else {
+            return calculateTitleRelevance(profile, searchTerm) > 0;
+        }
+    });
+    
+    // Sort by relevance score (highest first)
+    filteredProfiles.sort((a, b) => {
+        if (expandedTitles.length > 0) {
+            return calculateCategoryRelevance(b, expandedTitles) - calculateCategoryRelevance(a, expandedTitles);
+        } else {
+            return calculateTitleRelevance(b, searchTerm) - calculateTitleRelevance(a, searchTerm);
+        }
+    });
+    
+    renderProfiles();
+    updateResultsCount();
+    
+    // Show search feedback
+    const searchBtn = document.querySelector('button[onclick="searchByJobTitle()"]');
+    showButtonFeedback(searchBtn, `Found ${filteredProfiles.length}`, 'btn-success');
+}
+
+function clearJobTitleFilter() {
+    document.getElementById('jobTitleCategory').value = '';
+    document.getElementById('customJobTitle').value = '';
+    filteredProfiles = [...originalProfiles];
+    renderProfiles();
+    updateResultsCount();
+}
+
+function updateResultsCount() {
+    const countElement = document.querySelector('p.text-muted strong');
+    if (countElement) {
+        countElement.textContent = filteredProfiles.length;
+    }
+}
+
+function renderProfiles() {
+    const container = document.getElementById('profilesContainer');
+    if (!container) return;
+    
+    if (filteredProfiles.length === 0) {
+        container.innerHTML = `
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i data-feather="search" class="mb-3 text-muted" style="width: 64px; height: 64px;"></i>
+                        <h4>No Matching Profiles Found</h4>
+                        <p class="text-muted mb-4">
+                            Try adjusting your job title filter or clear it to see all results.
+                        </p>
+                        <button onclick="clearJobTitleFilter()" class="btn btn-primary">
+                            <i data-feather="refresh-cw" class="me-1"></i>
+                            Clear Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        feather.replace();
+        return;
+    }
+    
+    container.innerHTML = filteredProfiles.map((profile, index) => {
+        const avatarSrc = profile.avatar || 'https://static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2';
+        const profileUrl = profile.url || '#';
+        const jobTitle = profile.matched_job_title || profile.position || 'N/A';
+        const companyName = profile.current_company_name || (profile.current_company && profile.current_company.name) || 'N/A';
+        const location = profile.city || '';
+        
+        return `
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card profile-card h-100">
+                    <div class="card-body text-center">
+                        <!-- Avatar -->
+                        <div class="profile-avatar mb-3">
+                            <img src="${avatarSrc}" 
+                                 alt="${profile.name || 'Profile'}" 
+                                 class="rounded-circle"
+                                 onerror="this.src='https://static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2'">
+                        </div>
+                        
+                        <!-- Name -->
+                        <h5 class="profile-name mb-2">${profile.name || 'Unknown'}</h5>
+                        
+                        <!-- Job Title & Company -->
+                        <div class="text-center mb-3">
+                            <div class="job-title text-cyan mb-1">
+                                <i data-feather="briefcase" class="me-1" style="width: 14px; height: 14px;"></i>
+                                ${jobTitle}
+                            </div>
+                            <div class="company-name text-white-50">
+                                <i data-feather="building" class="me-1" style="width: 14px; height: 14px;"></i>
+                                ${companyName}
+                            </div>
+                        </div>
+                        
+                        <!-- Location -->
+                        ${location ? `
+                        <div class="text-center mb-3">
+                            <span class="location-badge">
+                                <i data-feather="map-pin" class="me-1" style="width: 12px; height: 12px;"></i>
+                                ${location}
+                            </span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="card-footer bg-transparent border-0 pt-0">
+                        <div class="row g-2">
+                            ${profileUrl !== '#' ? `
+                            <div class="col-4">
+                                <a href="${profileUrl}" target="_blank" class="btn btn-outline-cyan btn-sm w-100">
+                                    <i data-feather="linkedin" style="width: 14px; height: 14px;"></i>
+                                    LinkedIn
+                                </a>
+                            </div>
+                            ` : ''}
+                            <div class="col-4">
+                                <button class="btn btn-outline-success btn-sm w-100" onclick="findEmail(${index})">
+                                    <i data-feather="mail" style="width: 14px; height: 14px;"></i>
+                                    Find Email
+                                </button>
+                            </div>
+                            <div class="col-4">
+                                <button class="btn btn-outline-info btn-sm w-100" onclick="findTwitter(${index})">
+                                    <i data-feather="twitter" style="width: 14px; height: 14px;"></i>
+                                    Find Twitter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    feather.replace();
+}
+
+// Update findEmail and findTwitter functions to work with filtered profiles
+function findEmail(index) {
+    const profile = filteredProfiles[index];
+    const name = profile.name || '';
+    const company = profile.current_company_name || profile.current_company?.name || '';
+    
+    // Common email patterns to try
+    const patterns = [
+        `${name.toLowerCase().replace(/\s+/g, '.')}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+        `${name.toLowerCase().replace(/\s+/g, '')}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+        `${name.split(' ')[0]?.toLowerCase()}@${company.toLowerCase().replace(/\s+/g, '')}.com`,
+        `${name.split(' ')[0]?.toLowerCase()}.${name.split(' ')[1]?.toLowerCase()}@${company.toLowerCase().replace(/\s+/g, '')}.com`
+    ].filter(email => email.includes('@') && !email.includes('undefined'));
+    
+    if (patterns.length > 0) {
+        copyToClipboard(patterns[0]);
+        showButtonFeedback(event.target, 'Copied!', 'btn-success');
+    }
+}
+
+function findTwitter(index) {
+    const profile = filteredProfiles[index];
+    const name = profile.name || '';
+    const twitterHandle = `@${name.toLowerCase().replace(/\s+/g, '')}`;
+    
+    copyToClipboard(twitterHandle);
+    showButtonFeedback(event.target, 'Copied!', 'btn-success');
+}
+
+// Replace feather icons after page load
+document.addEventListener('DOMContentLoaded', function() {
+    feather.replace();
+    
+    // Add container ID to existing profiles container
+    const existingContainer = document.querySelector('.row:has(.profile-card)');
+    if (existingContainer) {
+        existingContainer.id = 'profilesContainer';
+    }
+});
+</script>
+{% endblock %}

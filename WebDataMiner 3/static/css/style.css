@@ -1,0 +1,372 @@
+/* Custom styles for LinkedIn Profile Filter */
+:root {
+    --primary-color: #4fb3d9;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --info-color: #17a2b8;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --dark-purple: #1a1a2e;
+    --darker-purple: #16213e;
+    --darkest-purple: #0f0f23;
+    --cyan-blue: #4fb3d9;
+    --light-cyan: #6ec1e4;
+}
+
+/* Body and layout */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, var(--dark-purple) 0%, var(--darker-purple) 50%, var(--darkest-purple) 100%);
+    color: #ffffff;
+}
+
+main {
+    flex: 1;
+}
+
+/* Card enhancements */
+.card {
+    border: 1px solid rgba(79, 179, 217, 0.2);
+    background: rgba(26, 26, 46, 0.8);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease-in-out;
+    color: #ffffff;
+}
+
+.card:hover {
+    box-shadow: 0 8px 32px rgba(79, 179, 217, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Profile Card Styling */
+.profile-card {
+    background: rgba(26, 26, 46, 0.9);
+    border: 1px solid rgba(79, 179, 217, 0.3);
+    transition: all 0.3s ease;
+}
+
+.profile-card:hover {
+    border-color: var(--cyan-blue);
+    box-shadow: 0 8px 32px rgba(79, 179, 217, 0.3);
+    transform: translateY(-5px);
+}
+
+.profile-img {
+    width: 80px;
+    height: 80px;
+    border: 3px solid var(--cyan-blue);
+    object-fit: cover;
+}
+
+.profile-placeholder {
+    width: 80px;
+    height: 80px;
+    background: rgba(79, 179, 217, 0.1);
+    border: 2px solid rgba(79, 179, 217, 0.3);
+}
+
+.job-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.company-name {
+    font-size: 0.85rem;
+}
+
+.location-badge {
+    background: rgba(79, 179, 217, 0.2);
+    color: var(--cyan-blue);
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    border: 1px solid rgba(79, 179, 217, 0.3);
+}
+
+/* Custom button styles for cards */
+.btn-outline-cyan {
+    color: var(--cyan-blue);
+    border-color: var(--cyan-blue);
+    background: transparent;
+}
+
+.btn-outline-cyan:hover {
+    color: #ffffff;
+    background-color: var(--cyan-blue);
+    border-color: var(--cyan-blue);
+}
+
+.text-cyan {
+    color: var(--cyan-blue) !important;
+}
+
+/* Form styling */
+.form-control {
+    background: rgba(26, 26, 46, 0.6);
+    border: 1px solid rgba(79, 179, 217, 0.3);
+    color: #ffffff;
+}
+
+.form-control:focus {
+    border-color: var(--cyan-blue);
+    box-shadow: 0 0 0 0.2rem rgba(79, 179, 217, 0.25);
+    background: rgba(26, 26, 46, 0.8);
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Progress bar animation */
+.progress-bar-animated {
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+    0% {
+        background-position: 1rem 0;
+    }
+    100% {
+        background-position: 0 0;
+    }
+}
+
+/* Table enhancements */
+.table {
+    color: #ffffff;
+}
+
+.table > :not(caption) > * > * {
+    padding: 1rem 0.75rem;
+    border-color: rgba(79, 179, 217, 0.2);
+}
+
+.table-hover tbody tr:hover td {
+    background-color: rgba(79, 179, 217, 0.1);
+}
+
+.table-dark {
+    background: rgba(15, 15, 35, 0.8);
+    border-color: rgba(79, 179, 217, 0.3);
+}
+
+/* Profile avatar styling */
+.rounded-circle {
+    object-fit: cover;
+}
+
+/* Button group spacing */
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+/* Collapse animations */
+.collapse {
+    transition: height 0.35s ease;
+}
+
+/* Badge styling */
+.badge {
+    font-weight: 500;
+}
+
+/* Icon spacing */
+.feather {
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+}
+
+/* Loading spinner */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Alert styling */
+.alert {
+    border: 1px solid rgba(79, 179, 217, 0.3);
+    border-radius: 0.5rem;
+    background: rgba(26, 26, 46, 0.8);
+    color: #ffffff;
+}
+
+/* Footer styling */
+footer {
+    margin-top: auto;
+    background: rgba(15, 15, 35, 0.9) !important;
+    border-top: 1px solid rgba(79, 179, 217, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-group-sm > .btn {
+        padding: 0.125rem 0.25rem;
+    }
+}
+
+/* Dark theme specific adjustments */
+[data-bs-theme="dark"] .bg-light {
+    background-color: rgba(26, 26, 46, 0.6) !important;
+}
+
+[data-bs-theme="dark"] .table > :not(caption) > * > * {
+    border-bottom-color: rgba(79, 179, 217, 0.2);
+}
+
+/* Button styling */
+.btn-primary {
+    background: linear-gradient(135deg, var(--cyan-blue), var(--light-cyan));
+    border-color: var(--cyan-blue);
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--light-cyan), var(--cyan-blue));
+    border-color: var(--light-cyan);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: rgba(108, 117, 125, 0.8);
+    border-color: rgba(108, 117, 125, 0.5);
+    color: #ffffff;
+}
+
+.btn-outline-primary {
+    border-color: var(--cyan-blue);
+    color: var(--cyan-blue);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--cyan-blue);
+    border-color: var(--cyan-blue);
+    color: #ffffff;
+}
+
+/* Badge styling */
+.badge {
+    font-weight: 500;
+}
+
+.badge.bg-primary {
+    background-color: var(--cyan-blue) !important;
+}
+
+.badge.bg-success {
+    background-color: rgba(40, 167, 69, 0.8) !important;
+}
+
+.badge.bg-secondary {
+    background-color: rgba(108, 117, 125, 0.8) !important;
+}
+
+/* Loading state overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 15, 35, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* Progress bar styling */
+.progress {
+    background-color: rgba(26, 26, 46, 0.8);
+    border: 1px solid rgba(79, 179, 217, 0.3);
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, var(--cyan-blue), var(--light-cyan));
+}
+
+/* Success animations */
+@keyframes checkmark {
+    0% {
+        transform: scale(0);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.check-animation {
+    animation: checkmark 0.6s ease-in-out;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(26, 26, 46, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(79, 179, 217, 0.6);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(79, 179, 217, 0.8);
+}
+
+/* Text color adjustments */
+.text-muted {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.lead {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Form labels */
+.form-label {
+    color: #ffffff;
+    font-weight: 500;
+}
+
+.form-text {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Card headers */
+.card-header {
+    background: rgba(15, 15, 35, 0.9);
+    border-bottom: 1px solid rgba(79, 179, 217, 0.2);
+    color: #ffffff;
+}
+
+/* Links */
+a {
+    color: var(--cyan-blue);
+}
+
+a:hover {
+    color: var(--light-cyan);
+}
+
+/* Navbar brand hover */
+.navbar-brand:hover {
+    color: var(--light-cyan) !important;
+}
