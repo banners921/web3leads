@@ -242,18 +242,22 @@ class CSVDataService:
                     current_company_matched_title = current_title
                     logger.debug(f"Current company match found: {current_company_name} + {current_company_linkedin}")
             
-            # Step 3: Check current_company_name for name matching (if no previous matches)
+            # Step 3: Check current_company_name for name matching (only if no LinkedIn URL specified)
             current_name_match = False
             current_name_matched_title = ""
             
-            if not experience_match and not current_company_match and input_company:
+            if not experience_match and not current_company_match and input_company and not normalized_linkedin:
                 if input_company in current_company_name:
                     current_name_match = True
                     current_name_matched_title = current_title
                     logger.debug(f"Current company name match found: {current_company_name}")
             
             # Determine if profile has company/linkedin match
-            has_company_match = experience_match or current_company_match or current_name_match
+            # If LinkedIn URL is provided, require strict matching (experience_match or current_company_match)
+            if normalized_linkedin:
+                has_company_match = experience_match or current_company_match
+            else:
+                has_company_match = experience_match or current_company_match or current_name_match
             
             # If no company filter provided, include all
             if not input_company and not normalized_linkedin:
